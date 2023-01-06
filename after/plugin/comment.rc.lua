@@ -24,4 +24,4 @@ comment.setup({
 })
 
 vim.api.nvim_set_keymap("n", ",,", "gcc", { noremap = false, silent = false })
-vim.api.nvim_set_keymap("x", ",,", "gb", { noremap = false, silent = false })
+vim.api.nvim_set_keymap("x", ",,", "gc", { noremap = false, silent = false })
