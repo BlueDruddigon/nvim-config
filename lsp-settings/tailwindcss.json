@@ -1,0 +1,40 @@
+{
+  "tailwindCSS": {
+    "validate": true,
+    "hovers": true,
+    "codeActions": true,
+    "inspectPort": 2554,
+    "suggestions": true,
+    "colorDecorators": true,
+    "rootFontSize": 13,
+    "includeLanguages": {},
+    "emmetCompletions": false,
+    "showPixelEquivalents": true,
+    "files": {
+      "exclude": [
+        "**/.git/**",
+        "**/node_modules/**",
+        "**/.hg/**",
+        "**/.svn/**"
+      ]
+    },
+    "classAttributes": [
+      "class",
+      "className",
+      "ngClass"
+    ],
+    "lint": {
+      "cssConflict": "warning",
+      "invalidApply": "error",
+      "invalidScreen": "error",
+      "invalidVariant": "error",
+      "invalidConfigPath": "error",
+      "invalidTailwindDirective": "error",
+      "recommendedVariantOrder": "warning"
+    },
+    "experimental": {
+      "classRegex": [],
+      "configFile": null
+    }
+  }
+}
