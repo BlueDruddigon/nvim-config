@@ -8,7 +8,6 @@ vim.api.nvim_create_user_command("KiteLSP", function()
 		cmd = { "kite-lsp", "--editor=vim", "--stdio" },
 		whitelist = { "python", "javascript" },
 		autostart = true,
-		single_file_support = true,
 	})
 end, {})
 

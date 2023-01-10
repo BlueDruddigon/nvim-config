@@ -5,7 +5,7 @@ M.load_defaults = function()
 
 	local default_options = {
 		backup = false,
-		clipboard = "unnamedplus",
+		clipboard = "unnamed",
 		cmdheight = 1,
 		completeopt = { "menuone", "noselect" },
 		conceallevel = 0,

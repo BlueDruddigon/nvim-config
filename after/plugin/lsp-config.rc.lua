@@ -1,3 +1,28 @@
+local mason_status, mason = pcall(require, "mason")
+if not mason_status then
+	return
+end
+
+local mason_lspconfig_status, mason_lspconfig = pcall(require, "mason-lspconfig")
+if not mason_lspconfig_status then
+	return
+end
+
+mason.setup()
+
+mason_lspconfig.setup({
+	ensure_installed = {
+		"sumneko_lua",
+		"jsonls",
+		"pyright",
+		"tailwindcss",
+		"tsserver",
+		"astro",
+		"cssls",
+	},
+	automatic_installation = true,
+})
+
 local lspconfig_status, lspconfig = pcall(require, "lspconfig")
 if not lspconfig_status then
 	return
@@ -11,77 +36,11 @@ end
 nlsp_settings.setup({
 	config_home = vim.fn.stdpath("config") .. "/lsp-settings",
 	append_default_schemas = true,
-	ignored_servers = {},
 	loader = "json",
+	ignored_servers = {},
 })
 
-local diagnostics_float_config = {
-	focusable = false,
-	style = "minimal",
-	border = "rounded",
-	source = "always",
-	header = "",
-	prefix = "",
-	format = function(d)
-		local code = d.code or (d.user_data and d.user_data.lsp.code)
-		if code then
-			return string.format("%s [%s]", d.message, code):gsub("1. ", "")
-		end
-		return d.message
-	end,
-}
-
-local augroup_format = vim.api.nvim_create_augroup("LspFormat", { clear = true })
-local enable_format_on_save = function(_, bufnr)
-	vim.api.nvim_clear_autocmds({ group = augroup_format, buffer = bufnr })
-	vim.api.nvim_create_autocmd("BufWritePre", {
-		group = augroup_format,
-		buffer = bufnr,
-		callback = function()
-			vim.lsp.buf.format({ bufnr = bufnr })
-		end,
-	})
-end
-
--- Setup CodeLens
-local setup_codelens_refresh = function(client, bufnr)
-	local status_ok, codelens_supported = pcall(function()
-		return client.supports_method("textDocument/codeLens")
-	end)
-	if not status_ok or not codelens_supported then
-		return
-	end
-	local group = "lsp_code_lens_refresh"
-	local cl_events = { "BufEnter", "InsertLeave" }
-	local ok, cl_autocmds = pcall(vim.api.nvim_get_autocmds, {
-		group = group,
-		buffer = bufnr,
-		event = cl_events,
-	})
-
-	if ok and #cl_autocmds > 0 then
-		return
-	end
-	vim.api.nvim_create_augroup(group, { clear = false })
-	vim.api.nvim_create_autocmd(cl_events, {
-		group = group,
-		buffer = bufnr,
-		callback = vim.lsp.codelens.refresh,
-	})
-end
-
--- Setup Document Symbols
-local setup_document_symbols = function(client, bufnr)
-	vim.g.navic_silence = false -- can be set to true to suppress error
-	local symbols_supported = client.supports_method("textDocument/documentSymbol")
-	if not symbols_supported then
-		return
-	end
-	local status_ok, navic = pcall(require, "nvim-navic")
-	if status_ok then
-		navic.attach(client, bufnr)
-	end
-end
+local augroup_format = vim.api.nvim_create_augroup("LspFormat", {})
 
 local on_attach = function(client, bufnr)
 	local buffer_options = {
@@ -103,7 +62,14 @@ local on_attach = function(client, bufnr)
 			["gs"] = { vim.lsp.buf.signature_help, "Show Signature Help" },
 			["gl"] = {
 				function()
-					local config = diagnostics_float_config
+					local config = {
+						focusable = false,
+						style = "minimal",
+						border = "rounded",
+						source = "always",
+						header = "",
+						prefix = "",
+					}
 					config.scope = "line"
 					vim.diagnostic.open_float(0, config)
 				end,
@@ -127,12 +93,17 @@ local on_attach = function(client, bufnr)
 		end
 	end
 
-	setup_codelens_refresh(client, bufnr)
-	setup_document_symbols(client, bufnr)
-	enable_format_on_save(_, bufnr)
+	vim.api.nvim_clear_autocmds({ group = augroup_format, buffer = bufnr })
+	vim.api.nvim_create_autocmd("BufWritePre", {
+		group = augroup_format,
+		buffer = bufnr,
+		callback = function()
+			vim.lsp.buf.format()
+		end,
+	})
 end
 
-local function common_capabilities()
+local get_capabilities = function()
 	local cmp_status, cmp_nvim_lsp = pcall(require, "cmp_nvim_lsp")
 	if cmp_status then
 		return cmp_nvim_lsp.default_capabilities()
@@ -147,24 +118,14 @@ local function common_capabilities()
 			"additionalTextEdits",
 		},
 	}
-
 	return capabilities
 end
 
-local on_exit = function(_, _)
-	vim.schedule(function()
-		pcall(function()
-			vim.api.nvim_clear_autocmds({ group = "lsp_code_lens_refresh" })
-		end)
-	end)
-end
-
-local capabilities = common_capabilities()
+local capabilities = get_capabilities()
 
 -- JsonLSP
 lspconfig["jsonls"].setup({
 	on_attach = on_attach,
-	on_exit = on_exit,
 	capabilities = capabilities,
 	settings = {
 		json = {
@@ -177,7 +138,6 @@ lspconfig["jsonls"].setup({
 -- Sumneko Lua LSP
 lspconfig["sumneko_lua"].setup({
 	on_attach = on_attach,
-	on_exit = on_exit,
 	capabilities = capabilities,
 	settings = {
 		Lua = {
@@ -202,7 +162,6 @@ lspconfig["sumneko_lua"].setup({
 -- Pyright LSP
 lspconfig["pyright"].setup({
 	on_attach = on_attach,
-	on_exit = on_exit,
 	capabilities = capabilities,
 	cmd = { "pyright-langserver", "--stdio" },
 	filetypes = { "python" },
@@ -230,7 +189,6 @@ lspconfig["pyright"].setup({
 -- Tsserver LSP
 lspconfig["tsserver"].setup({
 	on_attach = on_attach,
-	on_exit = on_exit,
 	capabilities = capabilities,
 	cmd = { "typescript-language-server", "--stdio" },
 	filetypes = { "typescript", "typescriptreact", "typescript.tsx" },
@@ -239,21 +197,18 @@ lspconfig["tsserver"].setup({
 -- TailwindCSS LSP
 lspconfig["tailwindcss"].setup({
 	on_attach = on_attach,
-	on_exit = on_exit,
 	capabilities = capabilities,
 })
 
 -- CSS LSP
 lspconfig["cssls"].setup({
 	on_attach = on_attach,
-	on_exit = on_exit,
 	capabilities = capabilities,
 })
 
 -- Astro LSP
 lspconfig["astro"].setup({
 	on_attach = on_attach,
-	on_exit = on_exit,
 	capabilities = capabilities,
 })
 
@@ -270,14 +225,24 @@ for type, icon in pairs(signs) do
 end
 
 local config = {
-	virtual_text = true,
-	update_in_insert = false,
-	severity_sort = true,
+	virtual_text = false,
+	signs = {
+		active = signs,
+	},
+	update_in_insert = true,
 	underline = true,
-	float = diagnostics_float_config,
+	severity_sort = true,
+	float = {
+		focusable = false,
+		style = "minimal",
+		border = "rounded",
+		source = "always",
+		header = "",
+		prefix = "",
+	},
 }
-
 vim.diagnostic.config(config)
+
 vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
 	focusable = true,
 	style = "minimal",
